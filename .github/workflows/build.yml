@@ -22,27 +22,17 @@ jobs:
       uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: x64
+    
+    - name: List files
+      run: dir
 
     # Step 3: 编译源文件
     - name: Compile source files
-      run: |
-        cl /c /EHsc /std:c++17 /DUNICODE /D_UNICODE ^
-           HashCalculator.cpp ^
-           MainWindow.cpp ^
-           main.cpp
+      run: cl /c /EHsc /std:c++17 /DUNICODE /D_UNICODE HashCalculator.cpp MainWindow.cpp main.cpp
 
     # Step 4: 链接可执行文件
     - name: Link executable
-      run: |
-        link /OUT:HashCalculator.exe ^
-             HashCalculator.obj ^
-             MainWindow.obj ^
-             main.obj ^
-             user32.lib ^
-             gdi32.lib ^
-             comctl32.lib ^
-             advapi32.lib ^
-             Shell32.lib
+      run: link /OUT:HashCalculator.exe HashCalculator.obj MainWindow.obj main.obj user32.lib gdi32.lib comctl32.lib advapi32.lib Shell32.lib
 
     # Step 5: 验证生成的可执行文件
     - name: Verify executable
