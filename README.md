@@ -8,23 +8,12 @@
 
 2. **编译源文件**:
    ```cmd
-   cl /c /EHsc /std:c++17 /DUNICODE /D_UNICODE ^
-      HashCalculator.cpp ^
-      MainWindow.cpp ^
-      main.cpp
+   cl /c /EHsc /std:c++17 /DUNICODE /D_UNICODE HashCalculator.cpp MainWindow.cpp main.cpp
    ```
 
 3. **链接可执行文件**:
    ```cmd
-   link /OUT:HashCalculator.exe ^
-        HashCalculator.obj ^
-        MainWindow.obj ^
-        main.obj ^
-        user32.lib ^
-        gdi32.lib ^
-        comctl32.lib ^
-        advapi32.lib ^
-        Shell32.lib
+   link /OUT:HashCalculator.exe HashCalculator.obj MainWindow.obj main.obj user32.lib gdi32.lib comctl32.lib advapi32.lib Shell32.lib
    ```
 
 4. **安装步骤**:

@@ -22,13 +22,13 @@ jobs:
       uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: x64
-    
-    - name: List files
-      run: dir
 
     # Step 3: 编译源文件
     - name: Compile source files
       run: cl /c /EHsc /std:c++17 /DUNICODE /D_UNICODE HashCalculator.cpp MainWindow.cpp main.cpp
+
+    - name: List files
+      run: dir
 
     # Step 4: 链接可执行文件
     - name: Link executable
@@ -36,6 +36,14 @@ jobs:
 
     # Step 5: 验证生成的可执行文件
     - name: Verify executable
+      shell: cmd
       run: |
         if not exist HashCalculator.exe exit 1
         echo Build successful!
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: HashCalculator
+        path: HashCalculator.exe
+        
