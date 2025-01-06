@@ -7,10 +7,13 @@
 
 namespace {
     const wchar_t CLASS_NAME[] = L"HashCalculatorWindow";
-    const int WINDOW_WIDTH = 800;
-    const int WINDOW_HEIGHT = 600;
+    const int WINDOW_WIDTH = 450;
+    const int WINDOW_HEIGHT = 300;
     const int IDC_EDIT = 1001;
     const int IDC_COPY = 1002;
+    const int MARGIN = 10;           // 边距
+    const int BUTTON_HEIGHT = 30;    // 按钮高度
+    const int BUTTON_WIDTH = 100;    // 按钮宽度
     std::vector<HashCalculator::FileInfo> g_fileInfos;
 }
 
@@ -18,6 +21,10 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
     switch (msg) {
     case WM_CREATE:
         CreateControls(hwnd);
+        return 0;
+
+    case WM_SIZE:
+        ResizeControls(hwnd, LOWORD(lParam), HIWORD(lParam));
         return 0;
 
     case WM_COMMAND:
@@ -73,14 +80,20 @@ HWND MainWindow::Create(HINSTANCE hInstance, const std::vector<std::wstring>& fi
 }
 
 void MainWindow::CreateControls(HWND hwnd) {
+    RECT rcClient;
+    GetClientRect(hwnd, &rcClient);
+    int width = rcClient.right - rcClient.left;
+    int height = rcClient.bottom - rcClient.top;
+
     // 创建多行文本框
     CreateWindowExW(
         WS_EX_CLIENTEDGE,
         L"EDIT",
         L"",
         WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
-        10, 10,
-        WINDOW_WIDTH - 40, WINDOW_HEIGHT - 100,
+        MARGIN, MARGIN,
+        width - 2 * MARGIN,
+        height - 3 * MARGIN - BUTTON_HEIGHT,
         hwnd,
         (HMENU)IDC_EDIT,
         GetModuleHandle(NULL),
@@ -92,13 +105,54 @@ void MainWindow::CreateControls(HWND hwnd) {
         L"BUTTON",
         L"复制",
         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        10, WINDOW_HEIGHT - 80,
-        100, 30,
+        MARGIN,
+        height - MARGIN - BUTTON_HEIGHT,
+        BUTTON_WIDTH,
+        BUTTON_HEIGHT,
         hwnd,
         (HMENU)IDC_COPY,
         GetModuleHandle(NULL),
         NULL
     );
+
+    // 设置文本框字体
+    HWND hEdit = GetDlgItem(hwnd, IDC_EDIT);
+    HFONT hFont = CreateFontW(
+        20,                     // 字体高度
+        0,                      // 字体宽度
+        0,                      // 倾斜角度
+        0,                      // 旋转角度
+        FW_NORMAL,             // 字体粗细
+        FALSE,                 // 是否斜体
+        FALSE,                 // 是否有下划线
+        FALSE,                 // 是否有删除线
+        DEFAULT_CHARSET,       // 字符集
+        OUT_DEFAULT_PRECIS,    // 输出精度
+        CLIP_DEFAULT_PRECIS,   // 裁剪精度
+        DEFAULT_QUALITY,       // 输出质量
+        DEFAULT_PITCH | FF_DONTCARE,  // 字体间距和字体族
+        L"Microsoft YaHei"     // 字体名称
+    );
+    SendMessage(hEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
+}
+
+void MainWindow::ResizeControls(HWND hwnd, int width, int height) {
+    // 调整文本框大小
+    HWND hEdit = GetDlgItem(hwnd, IDC_EDIT);
+    SetWindowPos(hEdit, NULL,
+        MARGIN, MARGIN,
+        width - 2 * MARGIN,
+        height - 3 * MARGIN - BUTTON_HEIGHT,
+        SWP_NOZORDER);
+
+    // 调整按钮位置
+    HWND hButton = GetDlgItem(hwnd, IDC_COPY);
+    SetWindowPos(hButton, NULL,
+        MARGIN,
+        height - MARGIN - BUTTON_HEIGHT,
+        BUTTON_WIDTH,
+        BUTTON_HEIGHT,
+        SWP_NOZORDER);
 }
 
 void MainWindow::ProcessFiles(HWND hwnd, const std::vector<std::wstring>& files) {
@@ -118,7 +172,7 @@ void MainWindow::ProcessFiles(HWND hwnd, const std::vector<std::wstring>& files)
 
     // 设置文本框字体
     HFONT hFont = CreateFontW(
-        16,                     // 字体高度
+        20,                     // 字体高度
         0,                      // 字体宽度
         0,                      // 倾斜角度
         0,                      // 旋转角度

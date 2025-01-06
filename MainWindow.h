@@ -12,4 +12,5 @@ private:
     static void CreateControls(HWND hwnd);
     static void ProcessFiles(HWND hwnd, const std::vector<std::wstring>& files);
     static void CopyToClipboard(HWND hwnd);
+    static void ResizeControls(HWND hwnd, int width, int height);
 }; 
