@@ -1,9 +1,11 @@
-name: Build HashCalculator
+name: Build and Release HashCalculator
 
 on:
   push:
     branches:
       - main
+    tags:
+      - 'v*.*.*'
   pull_request:
     branches:
       - main
@@ -11,39 +13,149 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      
     steps:
     # Step 1: 检出代码
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-    # Step 2: 设置 Visual Studio 环境
+    # Step 2: 获取版本信息
+    - name: Get version
+      id: version
+      shell: powershell
+      run: |
+        if ($env:GITHUB_REF -match '^refs/tags/v(.+)$') {
+          $version = $Matches[1]
+        } else {
+          $version = "dev-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        }
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+        echo "Version: $version"
+
+    # Step 3: 设置 Visual Studio 环境
     - name: Set up Visual Studio
       uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: x64
 
-    # Step 3: 编译源文件
+    # Step 4: 编译源文件
     - name: Compile source files
+      shell: cmd
       run: cl /c /EHsc /std:c++17 /DUNICODE /D_UNICODE HashCalculator.cpp MainWindow.cpp main.cpp
 
-    - name: List files
-      run: dir
-
-    # Step 4: 链接可执行文件
+    # Step 5: 链接可执行文件
     - name: Link executable
+      shell: cmd
       run: link /OUT:HashCalculator.exe HashCalculator.obj MainWindow.obj main.obj user32.lib gdi32.lib comctl32.lib advapi32.lib Shell32.lib
 
-    # Step 5: 验证生成的可执行文件
+    # Step 6: 验证生成的可执行文件
     - name: Verify executable
       shell: cmd
       run: |
         if not exist HashCalculator.exe exit 1
         echo Build successful!
-    
-    - name: Upload artifact
+        dir *.exe
+
+    # Step 7: 创建发布包
+    - name: Create release package
+      shell: powershell
+      run: |
+        # 创建发布目录
+        New-Item -ItemType Directory -Path "release" -Force
+        
+        # 复制可执行文件
+        Copy-Item "HashCalculator.exe" "release/"
+        
+        # 复制注册文件
+        Copy-Item "register.reg" "release/"
+        
+        # 创建安装说明文件
+        @"
+        HashCalculator v${{ steps.version.outputs.version }}
+        
+        ## 安装步骤：
+        1. 将 HashCalculator.exe 复制到 C:\Program Files\HashCalculator\ 目录
+        2. 以管理员身份运行 register.reg 注册右键菜单
+        
+        ## 使用说明：
+        在文件资源管理器中右键单击任意文件，选择"文件MD5和SHA1"即可查看哈希值。
+        
+        ## 注意事项：
+        - 需要管理员权限来注册右键菜单
+        - 确保系统已安装 Visual C++ Runtime
+        "@ | Out-File -FilePath "release/安装说明.txt" -Encoding UTF8
+        
+        # 打包为zip文件
+        Compress-Archive -Path "release/*" -DestinationPath "HashCalculator-v${{ steps.version.outputs.version }}.zip"
+        
+        # 显示打包结果
+        Get-ChildItem "HashCalculator-*.zip" | Format-List
+
+    # Step 8: 上传构建产物
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: HashCalculator
-        path: HashCalculator.exe
+        name: HashCalculator-v${{ steps.version.outputs.version }}
+        path: HashCalculator-v${{ steps.version.outputs.version }}.zip
+        retention-days: 30
+
+  # 发布job - 仅在推送tag时运行
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: HashCalculator-v${{ needs.build.outputs.version }}
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: HashCalculator v${{ needs.build.outputs.version }}
+        body: |
+          ## HashCalculator v${{ needs.build.outputs.version }}
+          
+          ### 功能特性
+          - 🔒 计算文件的 MD5 和 SHA1 哈希值
+          - 🖱️ 右键菜单集成，使用便捷
+          - 📋 一键复制哈希值到剪贴板
+          - 📦 支持批量处理多个文件
+          - 🎨 友好的中文界面
+          
+          ### 安装步骤
+          1. 下载 `HashCalculator-v${{ needs.build.outputs.version }}.zip` 
+          2. 解压到任意目录
+          3. 将 `HashCalculator.exe` 复制到 `C:\Program Files\HashCalculator\` 目录
+          4. 以管理员身份运行 `register.reg` 注册右键菜单
+          
+          ### 使用方法
+          在文件资源管理器中右键单击任意文件，选择"文件MD5和SHA1"即可查看哈希值。
+          
+          ### 系统要求
+          - Windows 7/8/10/11 (x64)
+          - Visual C++ Redistributable
+          
+          ---
+          
+          ### What's Changed
+          请查看提交历史了解具体变更内容。
+          
+        files: |
+          HashCalculator-v${{ needs.build.outputs.version }}.zip
+        draft: false
+        prerelease: false
         
