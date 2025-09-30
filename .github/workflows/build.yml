@@ -74,21 +74,33 @@ jobs:
         # 复制注册文件
         Copy-Item "register.reg" "release/"
         
-        # 创建安装说明文件
-        @"
-        HashCalculator v${{ steps.version.outputs.version }}
-        
-        ## 安装步骤：
-        1. 将 HashCalculator.exe 复制到 C:\Program Files\HashCalculator\ 目录
-        2. 以管理员身份运行 register.reg 注册右键菜单
-        
-        ## 使用说明：
-        在文件资源管理器中右键单击任意文件，选择"文件MD5和SHA1"即可查看哈希值。
-        
-        ## 注意事项：
-        - 需要管理员权限来注册右键菜单
-        - 确保系统已安装 Visual C++ Runtime
-        "@ | Out-File -FilePath "release/安装说明.txt" -Encoding UTF8
+        # 创建安装说明文件（使用英文文件名和UTF8BOM编码避免乱码）
+        $installGuide = @"
+HashCalculator v${{ steps.version.outputs.version }}
+
+## 安装步骤：
+1. 将 HashCalculator.exe 复制到 C:\Program Files\HashCalculator\ 目录
+2. 以管理员身份运行 register.reg 注册右键菜单
+
+## 使用说明：
+在文件资源管理器中右键单击任意文件，选择"文件MD5和SHA1"即可查看哈希值。
+
+## 注意事项：
+- 需要管理员权限来注册右键菜单
+- 确保系统已安装 Visual C++ Runtime
+
+## Installation Steps:
+1. Copy HashCalculator.exe to C:\Program Files\HashCalculator\ directory
+2. Run register.reg as administrator to register context menu
+
+## Usage:
+Right-click any file in File Explorer, select "文件MD5和SHA1" to view hash values.
+
+## Requirements:
+- Administrator privileges required for context menu registration
+- Visual C++ Runtime must be installed
+"@
+        [System.IO.File]::WriteAllText("release/Installation_Guide.txt", $installGuide, [System.Text.Encoding]::UTF8)
         
         # 打包为zip文件
         Compress-Archive -Path "release/*" -DestinationPath "HashCalculator-v${{ steps.version.outputs.version }}.zip"

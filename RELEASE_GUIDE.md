@@ -60,7 +60,7 @@ gh release create v1.0.0 --title "HashCalculator v1.0.0" --notes "首个正式�
 HashCalculator-v1.0.0.zip
 ├── HashCalculator.exe      # 主程序
 ├── register.reg           # 右键菜单注册文件
-└── 安装说明.txt           # 详细安装指南
+└── Installation_Guide.txt # 详细安装指南（中英文双语）
 ```
 
 ## 工作流触发条件
