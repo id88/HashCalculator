@@ -60,8 +60,8 @@ jobs:
         Copy-Item "register.reg" -Destination "release/"
         
         # 创建发布说明
-        $releaseNotes = @"
-# HashCalculator v$version 发布说明
+        $releaseNotes = @'
+# HashCalculator v{0} 发布说明
 
 ## 🎉 新版本特性
 
@@ -72,17 +72,17 @@ jobs:
 
 ## 📦 下载
 
-- **HashCalculator-v$version.zip** - 完整安装包
+- **HashCalculator-v{0}.zip** - 完整安装包
   - 包含可执行文件、安装说明和注册文件
-  - 文件大小：约 $fileSize KB
-  - SHA256：``$sha256``
-  - MD5：``$md5``
+  - 文件大小：约 {1} KB
+  - SHA256：`{2}`
+  - MD5：`{3}`
 
 ## 🚀 安装说明
 
-1. 下载 ``HashCalculator-v$version.zip`` 文件
-2. 解压到任意目录（建议：``C:\Program Files\HashCalculator``）
-3. 以管理员身份运行 ``register.reg`` 注册右键菜单
+1. 下载 `HashCalculator-v{0}.zip` 文件
+2. 解压到任意目录（建议：`C:\Program Files\HashCalculator`）
+3. 以管理员身份运行 `register.reg` 注册右键菜单
 4. 重启文件资源管理器或重新登录
 
 ## 📋 使用说明
@@ -100,12 +100,12 @@ jobs:
 
 ## 🐛 问题反馈
 
-如果您遇到任何问题或有建议，请在 [Issues](https://github.com/${{ github.repository }}/issues) 页面提交反馈。
+如果您遇到任何问题或有建议，请在 [Issues](https://github.com/{4}/issues) 页面提交反馈。
 
 ---
 
 **注意**：请验证下载文件的校验和以确保文件完整性。
-"@
+'@ -f $version, $fileSize, $sha256, $md5, ${{ github.repository }}
         $releaseNotes | Out-File -FilePath "release/RELEASE_NOTES.md" -Encoding UTF8
         
         # 创建ZIP包
