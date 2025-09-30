@@ -80,7 +80,7 @@ jobs:
         Copy-Item "register.reg" -Destination "release/"
         
         # 创建安装说明
-        $installText = @"
+        $installText = @'
 # HashCalculator 安装说明
 
 ## 安装步骤
@@ -95,25 +95,25 @@ jobs:
 4. 点击"复制"按钮可将信息复制到剪贴板
 
 ## 文件校验
-- SHA256: $sha256
-- MD5: $md5
-- 文件大小: $fileSize KB
+- SHA256: {0}
+- MD5: {1}
+- 文件大小: {2} KB
 
 ## 系统要求
 - Windows 7 或更高版本
 - Visual C++ Redistributable (通常系统已安装)
-"@
+'@ -f $sha256, $md5, $fileSize
         $installText | Out-File -FilePath "release/INSTALL.txt" -Encoding UTF8
         
         # 创建版本信息文件
-        $versionInfo = @"
+        $versionInfo = @'
 版本信息:
-- 构建时间: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-- 提交哈希: ${{ github.sha }}
-- 文件大小: $fileSize KB
-- SHA256: $sha256
-- MD5: $md5
-"@
+- 构建时间: {0}
+- 提交哈希: {1}
+- 文件大小: {2} KB
+- SHA256: {3}
+- MD5: {4}
+'@ -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), ${{ github.sha }}, $fileSize, $sha256, $md5
         $versionInfo | Out-File -FilePath "release/VERSION.txt" -Encoding UTF8
 
     # Step 9: 上传构建产物
