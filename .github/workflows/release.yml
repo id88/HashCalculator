@@ -63,48 +63,48 @@ jobs:
         $releaseNotes = @'
 # HashCalculator v{0} 发布说明
 
-## 🎉 新版本特性
+## 新版本特性
 
 - 文件哈希计算器，支持MD5和SHA1算法
 - 右键菜单集成，方便快速计算文件哈希值
 - 简洁的图形界面，支持复制到剪贴板
 - 支持多文件同时处理
 
-## 📦 下载
+## 下载
 
 - **HashCalculator-v{0}.zip** - 完整安装包
   - 包含可执行文件、安装说明和注册文件
   - 文件大小：约 {1} KB
-  - SHA256：`{2}`
-  - MD5：`{3}`
+  - SHA256：{2}
+  - MD5：{3}
 
-## 🚀 安装说明
+## 安装说明
 
-1. 下载 `HashCalculator-v{0}.zip` 文件
-2. 解压到任意目录（建议：`C:\Program Files\HashCalculator`）
-3. 以管理员身份运行 `register.reg` 注册右键菜单
+1. 下载 HashCalculator-v{0}.zip 文件
+2. 解压到任意目录（建议：C:\Program Files\HashCalculator）
+3. 以管理员身份运行 register.reg 注册右键菜单
 4. 重启文件资源管理器或重新登录
 
-## 📋 使用说明
+## 使用说明
 
 1. 在文件资源管理器中，右键单击任意文件
 2. 在右键菜单中选择"文件MD5和SHA1"
 3. 在弹出的窗口中查看文件的哈希值
 4. 点击"复制"按钮可将信息复制到剪贴板
 
-## 🔧 系统要求
+## 系统要求
 
 - Windows 7 或更高版本
 - Visual C++ Redistributable（通常系统已安装）
 - 管理员权限（仅用于注册右键菜单）
 
-## 🐛 问题反馈
+## 问题反馈
 
-如果您遇到任何问题或有建议，请在 [Issues](https://github.com/{4}/issues) 页面提交反馈。
+如果您遇到任何问题或有建议，请在 Issues 页面提交反馈。
 
 ---
 
-**注意**：请验证下载文件的校验和以确保文件完整性。
+注意：请验证下载文件的校验和以确保文件完整性。
 '@ -f $version, $fileSize, $sha256, $md5, "${{ github.repository }}"
         $releaseNotes | Out-File -FilePath "release/RELEASE_NOTES.md" -Encoding UTF8
         
