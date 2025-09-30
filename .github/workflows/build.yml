@@ -1,4 +1,4 @@
-name: Build HashCalculator
+name: Build and Release HashCalculator
 
 on:
   push:
@@ -7,6 +7,8 @@ on:
   pull_request:
     branches:
       - main
+  release:
+    types: [published]
 
 jobs:
   build:
@@ -15,7 +17,7 @@ jobs:
     steps:
     # Step 1: 检出代码
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     # Step 2: 设置 Visual Studio 环境
     - name: Set up Visual Studio
@@ -23,27 +25,140 @@ jobs:
       with:
         arch: x64
 
-    # Step 3: 编译源文件
+    # Step 3: 编译资源文件
+    - name: Compile resource file
+      run: rc /r HashCalculator.rc
+
+    # Step 4: 编译源文件
     - name: Compile source files
-      run: cl /c /EHsc /std:c++17 /DUNICODE /D_UNICODE HashCalculator.cpp MainWindow.cpp main.cpp
+      run: cl /c /EHsc /std:c++17 /DUNICODE /D_UNICODE /I. /W3 /O2 /GL HashCalculator.cpp MainWindow.cpp main.cpp
 
-    - name: List files
-      run: dir
-
-    # Step 4: 链接可执行文件
+    # Step 5: 链接可执行文件
     - name: Link executable
-      run: link /OUT:HashCalculator.exe HashCalculator.obj MainWindow.obj main.obj user32.lib gdi32.lib comctl32.lib advapi32.lib Shell32.lib
+      run: link /OUT:HashCalculator.exe /LTCG /OPT:REF /OPT:ICF HashCalculator.obj MainWindow.obj main.obj HashCalculator.res user32.lib gdi32.lib comctl32.lib advapi32.lib Shell32.lib
 
-    # Step 5: 验证生成的可执行文件
+    # Step 6: 验证生成的可执行文件
     - name: Verify executable
       shell: cmd
       run: |
         if not exist HashCalculator.exe exit 1
         echo Build successful!
-    
-    - name: Upload artifact
+        dir HashCalculator.exe
+        echo File size: 
+        for %%A in (HashCalculator.exe) do echo %%~zA bytes
+
+    # Step 7: 计算文件校验和
+    - name: Calculate checksums
+      shell: powershell
+      run: |
+        $hash = Get-FileHash -Path "HashCalculator.exe" -Algorithm SHA256
+        $hash.Hash | Out-File -FilePath "HashCalculator.exe.sha256" -Encoding ASCII
+        Write-Host "SHA256: $($hash.Hash)"
+        
+        $md5 = Get-FileHash -Path "HashCalculator.exe" -Algorithm MD5
+        $md5.Hash | Out-File -FilePath "HashCalculator.exe.md5" -Encoding ASCII
+        Write-Host "MD5: $($md5.Hash)"
+
+    # Step 8: 创建发布包
+    - name: Create release package
+      shell: powershell
+      run: |
+        # 创建发布目录
+        New-Item -ItemType Directory -Path "release" -Force
+        
+        # 获取文件信息
+        $exeFile = Get-Item "HashCalculator.exe"
+        $fileSize = [math]::Round($exeFile.Length / 1KB, 2)
+        $sha256 = Get-Content "HashCalculator.exe.sha256"
+        $md5 = Get-Content "HashCalculator.exe.md5"
+        
+        # 复制文件
+        Copy-Item "HashCalculator.exe" -Destination "release/"
+        Copy-Item "HashCalculator.exe.sha256" -Destination "release/"
+        Copy-Item "HashCalculator.exe.md5" -Destination "release/"
+        Copy-Item "README.md" -Destination "release/"
+        Copy-Item "register.reg" -Destination "release/"
+        
+        # 创建安装说明
+        $installText = @"
+# HashCalculator 安装说明
+
+## 安装步骤
+1. 将 HashCalculator.exe 复制到任意目录（建议：C:\Program Files\HashCalculator）
+2. 以管理员身份运行 register.reg 注册右键菜单
+3. 重启文件资源管理器或重新登录
+
+## 使用说明
+1. 在文件资源管理器中，右键单击任意文件
+2. 在右键菜单中选择"文件MD5和SHA1"
+3. 在弹出的窗口中查看文件的哈希值
+4. 点击"复制"按钮可将信息复制到剪贴板
+
+## 文件校验
+- SHA256: $sha256
+- MD5: $md5
+- 文件大小: $fileSize KB
+
+## 系统要求
+- Windows 7 或更高版本
+- Visual C++ Redistributable (通常系统已安装)
+"@
+        $installText | Out-File -FilePath "release/INSTALL.txt" -Encoding UTF8
+        
+        # 创建版本信息文件
+        $versionInfo = @"
+版本信息:
+- 构建时间: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+- 提交哈希: ${{ github.sha }}
+- 文件大小: $fileSize KB
+- SHA256: $sha256
+- MD5: $md5
+"@
+        $versionInfo | Out-File -FilePath "release/VERSION.txt" -Encoding UTF8
+
+    # Step 9: 上传构建产物
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: HashCalculator
-        path: HashCalculator.exe
+        name: HashCalculator-${{ github.sha }}
+        path: release/
+        retention-days: 30
+
+  release:
+    needs: build
+    runs-on: windows-latest
+    if: github.event_name == 'release'
+
+    steps:
+    # Step 1: 检出代码
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Step 2: 下载构建产物
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: HashCalculator-${{ github.sha }}
+        path: release/
+
+    # Step 3: 创建发布包
+    - name: Create release package
+      shell: powershell
+      run: |
+        # 创建ZIP包
+        Compress-Archive -Path "release\*" -DestinationPath "HashCalculator-v${{ github.event.release.tag_name }}.zip" -Force
+        
+        # 显示文件信息
+        Get-ChildItem "HashCalculator-v${{ github.event.release.tag_name }}.zip" | Format-Table Name, Length, LastWriteTime
+
+    # Step 4: 上传发布包
+    - name: Upload release assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./HashCalculator-v${{ github.event.release.tag_name }}.zip
+        asset_name: HashCalculator-v${{ github.event.release.tag_name }}.zip
+        asset_content_type: application/zip
         

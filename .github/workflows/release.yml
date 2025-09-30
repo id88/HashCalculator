@@ -1,0 +1,128 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Visual Studio
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    - name: Compile resource file
+      run: rc /r HashCalculator.rc
+
+    - name: Compile source files
+      run: cl /c /EHsc /std:c++17 /DUNICODE /D_UNICODE /I. /W3 /O2 /GL HashCalculator.cpp MainWindow.cpp main.cpp
+
+    - name: Link executable
+      run: link /OUT:HashCalculator.exe /LTCG /OPT:REF /OPT:ICF HashCalculator.obj MainWindow.obj main.obj HashCalculator.res user32.lib gdi32.lib comctl32.lib advapi32.lib Shell32.lib
+
+    - name: Calculate checksums
+      shell: powershell
+      run: |
+        $hash = Get-FileHash -Path "HashCalculator.exe" -Algorithm SHA256
+        $hash.Hash | Out-File -FilePath "HashCalculator.exe.sha256" -Encoding ASCII
+        $md5 = Get-FileHash -Path "HashCalculator.exe" -Algorithm MD5
+        $md5.Hash | Out-File -FilePath "HashCalculator.exe.md5" -Encoding ASCII
+        
+        # 输出校验和信息
+        Write-Host "SHA256: $($hash.Hash)"
+        Write-Host "MD5: $($md5.Hash)"
+
+    - name: Create release package
+      shell: powershell
+      run: |
+        # 获取版本号
+        $version = ${{ github.ref_name }}.Substring(1)  # 移除 'v' 前缀
+        $exeFile = Get-Item "HashCalculator.exe"
+        $fileSize = [math]::Round($exeFile.Length / 1KB, 2)
+        $sha256 = Get-Content "HashCalculator.exe.sha256"
+        $md5 = Get-Content "HashCalculator.exe.md5"
+        
+        # 创建发布目录
+        New-Item -ItemType Directory -Path "release" -Force
+        
+        # 复制文件
+        Copy-Item "HashCalculator.exe" -Destination "release/"
+        Copy-Item "HashCalculator.exe.sha256" -Destination "release/"
+        Copy-Item "HashCalculator.exe.md5" -Destination "release/"
+        Copy-Item "README.md" -Destination "release/"
+        Copy-Item "register.reg" -Destination "release/"
+        
+        # 创建发布说明
+        $releaseNotes = @"
+# HashCalculator v$version 发布说明
+
+## 🎉 新版本特性
+
+- 文件哈希计算器，支持MD5和SHA1算法
+- 右键菜单集成，方便快速计算文件哈希值
+- 简洁的图形界面，支持复制到剪贴板
+- 支持多文件同时处理
+
+## 📦 下载
+
+- **HashCalculator-v$version.zip** - 完整安装包
+  - 包含可执行文件、安装说明和注册文件
+  - 文件大小：约 $fileSize KB
+  - SHA256：``$sha256``
+  - MD5：``$md5``
+
+## 🚀 安装说明
+
+1. 下载 ``HashCalculator-v$version.zip`` 文件
+2. 解压到任意目录（建议：``C:\Program Files\HashCalculator``）
+3. 以管理员身份运行 ``register.reg`` 注册右键菜单
+4. 重启文件资源管理器或重新登录
+
+## 📋 使用说明
+
+1. 在文件资源管理器中，右键单击任意文件
+2. 在右键菜单中选择"文件MD5和SHA1"
+3. 在弹出的窗口中查看文件的哈希值
+4. 点击"复制"按钮可将信息复制到剪贴板
+
+## 🔧 系统要求
+
+- Windows 7 或更高版本
+- Visual C++ Redistributable（通常系统已安装）
+- 管理员权限（仅用于注册右键菜单）
+
+## 🐛 问题反馈
+
+如果您遇到任何问题或有建议，请在 [Issues](https://github.com/${{ github.repository }}/issues) 页面提交反馈。
+
+---
+
+**注意**：请验证下载文件的校验和以确保文件完整性。
+"@
+        $releaseNotes | Out-File -FilePath "release/RELEASE_NOTES.md" -Encoding UTF8
+        
+        # 创建ZIP包
+        Compress-Archive -Path "release\*" -DestinationPath "HashCalculator-v$version.zip" -Force
+        
+        # 显示文件信息
+        Get-ChildItem "HashCalculator-v$version.zip" | Format-Table Name, Length, LastWriteTime
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          HashCalculator-v${{ github.ref_name }}.zip
+          HashCalculator.exe.sha256
+          HashCalculator.exe.md5
+        body_path: release/RELEASE_NOTES.md
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

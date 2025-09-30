@@ -1,4 +1,5 @@
 ﻿#include "MainWindow.h"
+#include "version.h"
 #include <windows.h>
 #include <vector>
 #include <string>
