@@ -113,7 +113,7 @@ jobs:
 - 文件大小: {2} KB
 - SHA256: {3}
 - MD5: {4}
-'@ -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), ${{ github.sha }}, $fileSize, $sha256, $md5
+'@ -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), "${{ github.sha }}", $fileSize, $sha256, $md5
         $versionInfo | Out-File -FilePath "release/VERSION.txt" -Encoding UTF8
 
     # Step 9: 上传构建产物
@@ -146,10 +146,11 @@ jobs:
       shell: powershell
       run: |
         # 创建ZIP包
-        Compress-Archive -Path "release\*" -DestinationPath "HashCalculator-v${{ github.event.release.tag_name }}.zip" -Force
+        $tagName = "${{ github.event.release.tag_name }}"
+        Compress-Archive -Path "release\*" -DestinationPath "HashCalculator-v$tagName.zip" -Force
         
         # 显示文件信息
-        Get-ChildItem "HashCalculator-v${{ github.event.release.tag_name }}.zip" | Format-Table Name, Length, LastWriteTime
+        Get-ChildItem "HashCalculator-v$tagName.zip" | Format-Table Name, Length, LastWriteTime
 
     # Step 4: 上传发布包
     - name: Upload release assets

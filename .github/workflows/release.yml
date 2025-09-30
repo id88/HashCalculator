@@ -43,7 +43,7 @@ jobs:
       shell: powershell
       run: |
         # 获取版本号
-        $version = ${{ github.ref_name }}.Substring(1)  # 移除 'v' 前缀
+        $version = "${{ github.ref_name }}".Substring(1)  # 移除 'v' 前缀
         $exeFile = Get-Item "HashCalculator.exe"
         $fileSize = [math]::Round($exeFile.Length / 1KB, 2)
         $sha256 = Get-Content "HashCalculator.exe.sha256"
@@ -105,7 +105,7 @@ jobs:
 ---
 
 **注意**：请验证下载文件的校验和以确保文件完整性。
-'@ -f $version, $fileSize, $sha256, $md5, ${{ github.repository }}
+'@ -f $version, $fileSize, $sha256, $md5, "${{ github.repository }}"
         $releaseNotes | Out-File -FilePath "release/RELEASE_NOTES.md" -Encoding UTF8
         
         # 创建ZIP包
@@ -118,7 +118,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          HashCalculator-v${{ github.ref_name }}.zip
+          HashCalculator-v*.zip
           HashCalculator.exe.sha256
           HashCalculator.exe.md5
         body_path: release/RELEASE_NOTES.md
