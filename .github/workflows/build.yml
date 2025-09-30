@@ -1,4 +1,4 @@
-name: Build and Release HashCalculator
+name: Build HashCalculator
 
 on:
   push:
@@ -7,8 +7,6 @@ on:
   pull_request:
     branches:
       - main
-  release:
-    types: [published]
 
 jobs:
   build:
@@ -124,42 +122,3 @@ jobs:
         path: release/
         retention-days: 30
 
-  release:
-    needs: build
-    runs-on: windows-latest
-    if: github.event_name == 'release'
-
-    steps:
-    # Step 1: 检出代码
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    # Step 2: 下载构建产物
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: HashCalculator-${{ github.sha }}
-        path: release/
-
-    # Step 3: 创建发布包
-    - name: Create release package
-      shell: powershell
-      run: |
-        # 创建ZIP包
-        $tagName = "${{ github.event.release.tag_name }}"
-        Compress-Archive -Path "release\*" -DestinationPath "HashCalculator-v$tagName.zip" -Force
-        
-        # 显示文件信息
-        Get-ChildItem "HashCalculator-v$tagName.zip" | Format-Table Name, Length, LastWriteTime
-
-    # Step 4: 上传发布包
-    - name: Upload release assets
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./HashCalculator-v${{ github.event.release.tag_name }}.zip
-        asset_name: HashCalculator-v${{ github.event.release.tag_name }}.zip
-        asset_content_type: application/zip
-        
